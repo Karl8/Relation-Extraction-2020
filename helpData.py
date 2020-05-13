@@ -6,6 +6,41 @@ from pytorch_pretrained_bert import BertTokenizer
 import metrics
 from config import opt
 
+def split_multiobjects_schema(self, schema):
+    '''
+    {"object_type": {"inWork": "作品", "onDate": "Date", "@value": "奖项", "period": "Number"}, "predicate": "获奖", "subject_type": "娱乐人物"}
+    '''
+    data = []
+    for sample in schema:
+        sbj_type = sample['subject_type']
+        predicate = sample['predicate']
+        obj_type = sample['object_type']
+        for one_obj_type in obj_type:
+            data.append({"object_type": one_obj_type, "predicate": predicate, "subject_type": sbj_type})
+    return data
+
+def split_multiobjects_data(self, datas):
+    '''
+    {"text": "组委会大奖     2010年度最佳长剧奖   《娘家的故事2》     2010年度最佳海外引进剧   《丘比特的圈套》     2010年度飞跃演员   李光洁     2010年度风云人物   范伟     2010年度最具人气演员   吴秀波", 
+    "spo_list": [{"predicate": "获奖", "object_type": {"onDate": "Date", "@value": "奖项"}, "subject_type": "娱乐人物", "object": {"onDate": "2010年", "@value": "年度最具人气演员"}, "subject": "吴秀波"}]}
+    '''
+    split_data = []
+    for data in datas:
+        text = data["text"]
+        spo_list = data["spo_list"]
+        split_spo_list = []
+        for spo in spo_list:
+            predicate = spo["predicate']
+            obj = spo["object"]
+            obj_type = spo["object_type"]
+            sbj = spo["subject"]
+            sbj_type = spo["subject_type"]
+            
+            for one_obj in obj:
+                split_spo_list.append({"predicate": predicate, "object_type": obj_type[one_obj], "object": obj[one_obj], "subject_type": sbj_type, "subject": sbj})
+        split_data.append("text": text, "spo_list": split_spo_list})
+    return split_data
+
 def load_data(path, case=0):
     '''
     加载数据，字典数据列表.
@@ -18,6 +53,9 @@ def load_data(path, case=0):
         for line in data_lines:
             line_json = json.loads(line)
             data.append(line_json)
+        # split multiple objects
+        data = split_multiobjects_schema(data)
+        write2file(data, path + ".split")
         return data
     data_lines = open(path, encoding='utf-8').readlines()
     for line in data_lines:
@@ -27,6 +65,8 @@ def load_data(path, case=0):
         if 'spo_list' in line_json.keys() and len(line_json['spo_list']) == 0:
             continue
         data.append(line_json)
+        data = split_multiobjects_data(data)
+        write2file(data, path + ".split")
     return data
 
 def write2file(data, path):
@@ -51,8 +91,7 @@ class DataHelper(object):
         """
         得到所有的xx2xx文件
         """
-        origin_50_schema = load_data(self.opt.schema_dir_old, case=1)
-        new_50_schema = load_data(self.opt.schema_dir_new, case=1)
+        schema = load_data(self.opt.schema_dir, case=1)
         self.down2top = {}  # 记录类别的上下为关系
         for old, new in zip(origin_50_schema, new_50_schema):
             old_sample_obj_type = old['object_type']
@@ -219,7 +258,14 @@ class DataHelper(object):
         """
         得到实体和对应的类型列表，一一对应
         sample:
-        >> input: [姚明，NBA]
+        >> input: 
+        {
+            "predicate": "作者", 
+            "object_type": {"@value": "人物"}, 
+            "subject_type": "图书作品", 
+            "object": {"@value": "海宴"}, 
+            "subject": "琅琊榜"
+        }
         >> return:[人，组织]
         """
         entity_list, type_list = [], []
@@ -301,15 +347,93 @@ class DataHelper(object):
         PAD = self.tokenizer.convert_tokens_to_ids(['[PAD]'])
         O_tag = [self.type2id['O']]
         for data in datas:
+            '''
+            data: {
+                "text": "《步步惊心》改编自著名作家桐华的同名清穿小说《甄嬛传》改编自流潋紫所著的同名小说电视剧《何以笙箫默》改编自顾漫同名小说《花千骨》改编自fresh果果同名小说《裸婚时代》是月影兰析创作的一部情感小说《琅琊榜》是根据海宴同名网络小说改编电视剧《宫锁心玉》，又名《宫》《雪豹》，该剧改编自网络小说《特战先驱》《我是特种兵》由红遍网络的小说《最后一颗子弹留给我》改编电视剧《来不及说我爱你》改编自匪我思存同名小说《来不及说我爱你》", 
+                "spo_list": [
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "顾漫"}, 
+                        "subject": "何以笙箫默"
+                    }, 
+                    {
+                        "predicate": "改编自", 
+                        "object_type": {"@value": "作品"}, 
+                        "subject_type": "影视作品", 
+                        "object": {"@value": "最后一颗子弹留给我"}, 
+                        "subject": "我是特种兵"
+                    }, 
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "桐华"}, 
+                        "subject": "步步惊心"
+                    }, 
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "流潋紫"}, 
+                        "subject": "甄嬛传"
+                    }, 
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "fresh果果"}, 
+                        "subject": "花千骨"
+                    }, 
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "月影兰析"}, 
+                        "subject": "裸婚时代"
+                    }, 
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "海宴"}, 
+                        "subject": "琅琊榜"
+                    }, 
+                    {
+                        "predicate": "改编自", 
+                        "object_type": {"@value": "作品"}, 
+                        "subject_type": "影视作品", 
+                        "object": {"@value": "特战先驱"}, 
+                        "subject": "雪豹"
+                    }, 
+                    {
+                        "predicate": "改编自", 
+                        "object_type": {"@value": "作品"}, 
+                        "subject_type": "影视作品", 
+                        "object": {"@value": "来不及说我爱你"}, 
+                        "subject": "来不及说我爱你"
+                    }, 
+                    {
+                        "predicate": "作者", 
+                        "object_type": {"@value": "人物"}, 
+                        "subject_type": "图书作品", 
+                        "object": {"@value": "匪我思存"}, 
+                        "subject": "来不及说我爱你"
+                    }
+                ]
+            }
+
+            '''
             text = data['text']
             # 一共修改3处， util中一处 此文件两处去掉首位空格，然后将空格替换为@
             text = text.strip().replace(' ', '$')
             word_list = self.tokenizer.tokenize(text)
             sen = self.tokenizer.convert_tokens_to_ids(word_list)
             rel_max_sen = max(rel_max_sen, len(word_list))
+            # sentence length check
             if len(word_list) > self.opt.seq_length:
                 exceed_length_num += 1
-
             if len(word_list) < self.opt.seq_length:
                 sen = sen + PAD * (self.opt.seq_length - len(sen))
             else:
@@ -319,6 +443,7 @@ class DataHelper(object):
             if case >= 2:
                 continue
             entity_list, type_list = self.get_entity_list_and_type_list(data['spo_list'])
+            
             #__import__('ipdb').set_trace()
             # '▌1999年：「喜剧之王」前两年的贺岁档其实都有星爷，只不过作品票房一直跟不上'
             tag = self.get_tag(word_list, entity_list, type_list)
@@ -363,6 +488,7 @@ class DataHelper(object):
         if case < 2:
             np.save(data_root+'tags', tags)
             np.save(data_root+'relations', ent_rel)
+
     def process_data(self):
         if self.origin_train_data is not None:
             print("process train data")

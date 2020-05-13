@@ -24,7 +24,7 @@ class Config(object):
     # id2tag_dir = json_data_root + 'id2tag.json'
     # type2types_dir = json_data_root + 'type2types.json'
 
-    schema_dir_old = origin_data_root + 'schema.json'
+    schema_dir = origin_data_root + 'schema.json'
     train_data_dir = origin_data_root + 'train_data.json'
     dev_data_dir = origin_data_root + 'dev_data.json'
     test1_data_dir = origin_data_root + 'test1_data.json'
