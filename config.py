@@ -2,7 +2,7 @@
 
 class Config(object):
     # -----------数据集选择--------------------#
-    dataset = 'small'       # large(没有合并type关系)/small(合并type关系)
+    dataset = ''            # large(没有合并type关系)/small(合并type关系)
     naNum = 2               # 每个例子中补充的最大NA关系数目
     tag_nums = 19*2+1       # tag类型数量
     rel_nums = 50           # 关系数量
@@ -12,24 +12,23 @@ class Config(object):
     bert_vocab_dir = './bert-base-chinese/vocab.txt'
     bert_vocab_unk = './bert-base-chinese/vocab.txt'
 
-    npy_data_root = './data/'+dataset+'/npy_data/'
+    # npy_data_root = './data/'+dataset+'/npy_data/'
     origin_data_root = './data/'+dataset+'/origin_data/'
-    json_data_root = './data/'+dataset+'/json_data/'
+    # json_data_root = './data/'+dataset+'/json_data/'
 
-    id2type_dir = json_data_root + 'id2type.json'
-    type2id_dir = json_data_root + 'type2id.json'
-    tag2id_dir = json_data_root + 'tag2id.json'
-    r2id_dir = json_data_root + 'r2id.json'
-    id2r_dir = json_data_root + 'id2r.json'
-    id2tag_dir = json_data_root + 'id2tag.json'
-    type2types_dir = json_data_root + 'type2types.json'
+    # id2type_dir = json_data_root + 'id2type.json'
+    # type2id_dir = json_data_root + 'type2id.json'
+    # tag2id_dir = json_data_root + 'tag2id.json'
+    # r2id_dir = json_data_root + 'r2id.json'
+    # id2r_dir = json_data_root + 'id2r.json'
+    # id2tag_dir = json_data_root + 'id2tag.json'
+    # type2types_dir = json_data_root + 'type2types.json'
 
-    schema_dir_old = origin_data_root + 'all_50_schemas_old'
-    schema_dir_new = origin_data_root + 'all_50_schemas_new'
+    schema_dir_old = origin_data_root + 'schema.json'
     train_data_dir = origin_data_root + 'train_data.json'
     dev_data_dir = origin_data_root + 'dev_data.json'
-    test1_data_dir = origin_data_root + 'test1_data_postag.json'
-    test2_data_dir = origin_data_root + 'test2_data_postag.json'
+    test1_data_dir = origin_data_root + 'test1_data.json'
+    test2_data_dir = origin_data_root + 'test2_data.json'
 
     log_dir = './log'
     #  -------------- 模型超参数 -----------#
