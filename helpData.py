@@ -16,7 +16,7 @@ def split_multiobjects_schema(schema):
         predicate = sample['predicate']
         obj_type = sample['object_type']
         for one_obj_type in obj_type:
-            data.append({"object_type": one_obj_type, "predicate": predicate, "subject_type": sbj_type})
+            data.append({"object_type": obj_type[one_obj_type], "predicate": predicate, "subject_type": sbj_type})
     return data
 
 def split_multiobjects_data(datas):
@@ -54,21 +54,19 @@ def load_data(path, case="train"):
         for line in data_lines:
             line_json = json.loads(line)
             data.append(line_json)
-        # split multiple objects
-        data = split_multiobjects_schema(data)
-        write_split_data(data, path + ".split")
+        if not path.endswith(".split"):
+            print("split data", path)
+            # split multiple objects
+            data = split_multiobjects_schema(data)
+            write_split_data(data, path + ".split")
     elif case == "train" or case == "dev":
         data_lines = open(path, encoding='utf-8').readlines()
-        if path.endswith(".split"):
-            for line in data_lines:
-                line_json = json.loads(line)
-                data.append(line_json)
-        else:
-            for line in data_lines:
-                line_json = json.loads(line)
-                if 'spo_list' not in line_json.keys() or len(line_json['spo_list']) == 0:
-                    continue
-                data.append(line_json)
+        for line in data_lines:
+            line_json = json.loads(line)
+            if 'spo_list' not in line_json.keys() or len(line_json['spo_list']) == 0:
+                continue
+        data.append(line_json)
+        if not path.startswith(".split"):
             print("split data", path)
             data = split_multiobjects_data(data)
             write_split_data(data, path + ".split")
@@ -99,16 +97,16 @@ class DataHelper(object):
         self.type2types = None
         self.get_relations()
 
-        self.origin_train_data = load_data(self.opt.train_data_dir)
-        self.origin_dev_data = load_data(self.opt.dev_data_dir)
-        self.origin_test1_data = load_data(self.opt.test1_data_dir)
+        self.origin_train_data = load_data(self.opt.train_data_dir, "train")
+        self.origin_dev_data = load_data(self.opt.dev_data_dir, "dev")
+        self.origin_test1_data = load_data(self.opt.test1_data_dir, "test")
 
     def get_relations(self):
         """
         得到所有的xx2xx文件
         """
-        schema = load_data(self.opt.schema_dir, case=1)
-        self.down2top = {}  # 记录类别的上下为关系
+        schema = load_data(self.opt.schema_dir, "schema")
+        # self.down2top = {}  # 记录类别的上下为关系
         # for old, new in zip(origin_50_schema, new_50_schema):
         #     old_sample_obj_type = old['object_type']
         #     old_sample_sbj_type = old['subject_type']
@@ -128,7 +126,7 @@ class DataHelper(object):
         self.id2type = {}
         self.type2id = {}
         exist_ent_type, exist_rel_type = set(), set()
-        for sample in new_50_schema:
+        for sample in schema:
             obj, r, sbj = sample['object_type'], sample['predicate'], sample['subject_type']
             if obj not in exist_ent_type:
                 self.id2type[len(exist_ent_type)+1] = obj
@@ -520,8 +518,9 @@ class DataHelper(object):
 
 
 if __name__ == '__main__':
-    load_data(opt.train_data_dir)
-    load_data(opt.dev_data_dir)
-    load_data(opt.test1_data_dir)
+    # load_data(opt.train_data_dir, "train")
+    # load_data(opt.dev_data_dir, "dev")
+    # load_data(opt.test1_data_dir, "test")
+    load_data(opt.schema_dir, "schema")
     # dataHelper = DataHelper(opt)
     # dataHelper.process_data()
