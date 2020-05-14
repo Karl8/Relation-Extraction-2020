@@ -6,7 +6,7 @@ from pytorch_pretrained_bert import BertTokenizer
 import metrics
 from config import opt
 
-def split_multiobjects_schema(self, schema):
+def split_multiobjects_schema(schema):
     '''
     {"object_type": {"inWork": "作品", "onDate": "Date", "@value": "奖项", "period": "Number"}, "predicate": "获奖", "subject_type": "娱乐人物"}
     '''
@@ -19,7 +19,7 @@ def split_multiobjects_schema(self, schema):
             data.append({"object_type": one_obj_type, "predicate": predicate, "subject_type": sbj_type})
     return data
 
-def split_multiobjects_data(self, datas):
+def split_multiobjects_data(datas):
     '''
     {"text": "组委会大奖     2010年度最佳长剧奖   《娘家的故事2》     2010年度最佳海外引进剧   《丘比特的圈套》     2010年度飞跃演员   李光洁     2010年度风云人物   范伟     2010年度最具人气演员   吴秀波", 
     "spo_list": [{"predicate": "获奖", "object_type": {"onDate": "Date", "@value": "奖项"}, "subject_type": "娱乐人物", "object": {"onDate": "2010年", "@value": "年度最具人气演员"}, "subject": "吴秀波"}]}
@@ -30,46 +30,62 @@ def split_multiobjects_data(self, datas):
         spo_list = data["spo_list"]
         split_spo_list = []
         for spo in spo_list:
-            predicate = spo["predicate']
+            predicate = spo["predicate"]
             obj = spo["object"]
             obj_type = spo["object_type"]
             sbj = spo["subject"]
             sbj_type = spo["subject_type"]
-            
             for one_obj in obj:
                 split_spo_list.append({"predicate": predicate, "object_type": obj_type[one_obj], "object": obj[one_obj], "subject_type": sbj_type, "subject": sbj})
-        split_data.append("text": text, "spo_list": split_spo_list})
+        split_data.append({"text": text, "spo_list": split_spo_list})
     return split_data
 
-def load_data(path, case=0):
+def load_data(path, case="train"):
     '''
     加载数据，字典数据列表.
     0:加载原始json数据
     1:加载schema数据
     '''
+    print("load data from", path)
     data = []
-    if case == 1:
+    if case == "schema":
         data_lines = open(path, encoding='utf-8').readlines()
+        
         for line in data_lines:
             line_json = json.loads(line)
             data.append(line_json)
         # split multiple objects
         data = split_multiobjects_schema(data)
-        write2file(data, path + ".split")
-        return data
-    data_lines = open(path, encoding='utf-8').readlines()
-    for line in data_lines:
-        line_json = json.loads(line)
-        if line_json.get('postag', None) is None or len(line_json['postag']) == 0:
-            continue
-        if 'spo_list' in line_json.keys() and len(line_json['spo_list']) == 0:
-            continue
-        data.append(line_json)
-        data = split_multiobjects_data(data)
-        write2file(data, path + ".split")
+        write_split_data(data, path + ".split")
+    elif case == "train" or case == "dev":
+        data_lines = open(path, encoding='utf-8').readlines()
+        if path.endswith(".split"):
+            for line in data_lines:
+                line_json = json.loads(line)
+                data.append(line_json)
+        else:
+            for line in data_lines:
+                line_json = json.loads(line)
+                if 'spo_list' not in line_json.keys() or len(line_json['spo_list']) == 0:
+                    continue
+                data.append(line_json)
+            print("split data", path)
+            data = split_multiobjects_data(data)
+            write_split_data(data, path + ".split")
+    elif case == "test":
+        data_lines = open(path, encoding='utf-8').readlines()
+        for line in data_lines:
+            line_json = json.loads(line)
+            data.append(line_json)
     return data
 
+def write_split_data(datas, path):
+    with open(path, 'w') as f:
+        for data in datas:
+            f.write(json.dumps(data, ensure_ascii=False) + "\n")
+
 def write2file(data, path):
+    print("write data to", path)
     with open(path, 'w') as f:
         f.write(json.dumps(data, ensure_ascii=False))
 
@@ -83,8 +99,8 @@ class DataHelper(object):
         self.type2types = None
         self.get_relations()
 
-        self.origin_train_data = self.down2topForDatas(load_data(self.opt.train_data_dir))
-        self.origin_dev_data = self.down2topForDatas(load_data(self.opt.dev_data_dir))
+        self.origin_train_data = load_data(self.opt.train_data_dir)
+        self.origin_dev_data = load_data(self.opt.dev_data_dir)
         self.origin_test1_data = load_data(self.opt.test1_data_dir)
 
     def get_relations(self):
@@ -93,17 +109,17 @@ class DataHelper(object):
         """
         schema = load_data(self.opt.schema_dir, case=1)
         self.down2top = {}  # 记录类别的上下为关系
-        for old, new in zip(origin_50_schema, new_50_schema):
-            old_sample_obj_type = old['object_type']
-            old_sample_sbj_type = old['subject_type']
-            new_sample_obj_type = new['object_type']
-            new_sample_sbj_type = new['subject_type']
-            top_obj, top_sbj = self.down2top.get(old_sample_obj_type, None), self.down2top.get(old_sample_sbj_type, None)
-            assert (top_obj == None or top_obj == new_sample_obj_type) \
-                and (top_sbj == None or top_sbj == new_sample_sbj_type)
-            self.down2top[old_sample_obj_type] = new_sample_obj_type
-            self.down2top[old_sample_sbj_type] = new_sample_sbj_type
-        print("上下位关系为:{}".format(self.down2top))
+        # for old, new in zip(origin_50_schema, new_50_schema):
+        #     old_sample_obj_type = old['object_type']
+        #     old_sample_sbj_type = old['subject_type']
+        #     new_sample_obj_type = new['object_type']
+        #     new_sample_sbj_type = new['subject_type']
+        #     top_obj, top_sbj = self.down2top.get(old_sample_obj_type, None), self.down2top.get(old_sample_sbj_type, None)
+        #     assert (top_obj == None or top_obj == new_sample_obj_type) \
+        #         and (top_sbj == None or top_sbj == new_sample_sbj_type)
+        #     self.down2top[old_sample_obj_type] = new_sample_obj_type
+        #     self.down2top[old_sample_sbj_type] = new_sample_sbj_type
+        # print("上下位关系为:{}".format(self.down2top))
 
         self.r2id= {}
         self.id2r = {}
@@ -157,21 +173,21 @@ class DataHelper(object):
         write2file(self.type2id, self.opt.type2id_dir)
         write2file(self.type2types, self.opt.type2types_dir)
 
-    def down2topForDatas(self, datas):
-        topDatas = []
-        for data in datas:
-            text = data['text']
-            downSpoList = data['spo_list']
-            topSpoList = []
-            for spo in downSpoList:
-                spo['object_type'] = self.down2top[spo['object_type']]
-                spo['subject_type'] = self.down2top[spo['subject_type']]
-                topSpoList.append(spo)
-            dataUnit = {}
-            dataUnit['text'] = text
-            dataUnit['spo_list'] = topSpoList
-            topDatas.append(dataUnit)
-        return topDatas
+    # def down2topForDatas(self, datas):
+    #     topDatas = []
+    #     for data in datas:
+    #         text = data['text']
+    #         downSpoList = data['spo_list']
+    #         topSpoList = []
+    #         for spo in downSpoList:
+    #             spo['object_type'] = self.down2top[spo['object_type']]
+    #             spo['subject_type'] = self.down2top[spo['subject_type']]
+    #             topSpoList.append(spo)
+    #         dataUnit = {}
+    #         dataUnit['text'] = text
+    #         dataUnit['spo_list'] = topSpoList
+    #         topDatas.append(dataUnit)
+    #     return topDatas
 
     def get_positions(self, data_list, map_str):
         """
@@ -504,5 +520,8 @@ class DataHelper(object):
 
 
 if __name__ == '__main__':
-    dataHelper = DataHelper(opt)
-    dataHelper.process_data()
+    load_data(opt.train_data_dir)
+    load_data(opt.dev_data_dir)
+    load_data(opt.test1_data_dir)
+    # dataHelper = DataHelper(opt)
+    # dataHelper.process_data()
