@@ -20,8 +20,6 @@ def load_data(path):
     data_lines = open(path, encoding='utf-8').readlines()
     for line in data_lines:
         line_json = json.loads(line)
-        if len(line_json['postag']) == 0:
-            continue
         if 'spo_list' in line_json.keys() and len(line_json['spo_list']) == 0:
             continue
         data.append(line_json)
@@ -300,6 +298,7 @@ def get_sent2triple_set(json_datas):
         sent = data['text']
         spo_set = set()
         for spo_item in data['spo_list']:
+            print(spo_item)
             s = spo_item['subject'].lower()
             o = spo_item['object'].lower()
             r = spo_item['predicate']

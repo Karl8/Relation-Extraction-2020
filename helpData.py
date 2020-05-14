@@ -50,7 +50,6 @@ def load_data(path, case="train"):
     data = []
     if case == "schema":
         data_lines = open(path, encoding='utf-8').readlines()
-        
         for line in data_lines:
             line_json = json.loads(line)
             data.append(line_json)
@@ -66,7 +65,7 @@ def load_data(path, case="train"):
             if 'spo_list' not in line_json.keys() or len(line_json['spo_list']) == 0:
                 continue
         data.append(line_json)
-        if not path.startswith(".split"):
+        if not path.endswith(".split"):
             print("split data", path)
             data = split_multiobjects_data(data)
             write_split_data(data, path + ".split")
@@ -155,7 +154,7 @@ class DataHelper(object):
         self.type2id = {self.id2type[idx]: idx for idx in self.id2type.keys()}
 
         self.type2types = {ent:set() for ent in exist_ent_type}
-        for sample in new_50_schema:
+        for sample in schema:
             obj, r, sbj = sample['object_type'], sample['predicate'], sample['subject_type']
             self.type2types[obj].add(sbj)
 
@@ -521,6 +520,6 @@ if __name__ == '__main__':
     # load_data(opt.train_data_dir, "train")
     # load_data(opt.dev_data_dir, "dev")
     # load_data(opt.test1_data_dir, "test")
-    load_data(opt.schema_dir, "schema")
-    # dataHelper = DataHelper(opt)
-    # dataHelper.process_data()
+    # load_data(opt.schema_dir, "schema")
+    dataHelper = DataHelper(opt)
+    dataHelper.process_data()
