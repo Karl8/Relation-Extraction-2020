@@ -64,7 +64,7 @@ def load_data(path, case="train"):
             line_json = json.loads(line)
             if 'spo_list' not in line_json.keys() or len(line_json['spo_list']) == 0:
                 continue
-        data.append(line_json)
+            data.append(line_json)
         if not path.endswith(".split"):
             print("split data", path)
             data = split_multiobjects_data(data)

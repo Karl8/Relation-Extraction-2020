@@ -298,7 +298,6 @@ def get_sent2triple_set(json_datas):
         sent = data['text']
         spo_set = set()
         for spo_item in data['spo_list']:
-            print(spo_item)
             s = spo_item['subject'].lower()
             o = spo_item['object'].lower()
             r = spo_item['predicate']
@@ -336,8 +335,8 @@ def eval_file(predict_json, golden_file_path):
     return 100*pre, 100*rel, 100*f1
 
 def judge_data_quality(opt):
-    train_npy_data = np.load(opt.npy_data_root+'train/relations.npy')
-    dev_npy_data = np.load(opt.npy_data_root+'dev/relations.npy')
+    train_npy_data = np.load(opt.npy_data_root+'train/relations.npy', allow_pickle=True)
+    dev_npy_data = np.load(opt.npy_data_root+'dev/relations.npy', allow_pickle=True)
     train_data = []
     dev_data= []
     for i in train_npy_data:

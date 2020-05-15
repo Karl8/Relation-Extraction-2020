@@ -4,8 +4,8 @@ class Config(object):
     # -----------数据集选择--------------------#
     dataset = 'small'            # large(没有合并type关系)/small(合并type关系)
     naNum = 2               # 每个例子中补充的最大NA关系数目
-    tag_nums = 19*2+1       # tag类型数量
-    rel_nums = 50           # 关系数量
+    tag_nums = 27*2+1       # tag类型数量
+    rel_nums = 49           # 关系数量
 
     # -------------dir ----------------#
     bert_model_dir = './bert-base-chinese/bert-base-chinese.tar.gz'
@@ -27,8 +27,8 @@ class Config(object):
     schema_dir = origin_data_root + 'schema.json.split'
     train_data_dir = origin_data_root + 'train_data.json.split'
     dev_data_dir = origin_data_root + 'dev_data.json.split'
-    test1_data_dir = origin_data_root + 'test1_data.json.split'
-    test2_data_dir = origin_data_root + 'test2_data.json.split'
+    test1_data_dir = origin_data_root + 'test1_data.json'
+    test2_data_dir = origin_data_root + 'test2_data.json'
 
     log_dir = './log'
     #  -------------- 模型超参数 -----------#
