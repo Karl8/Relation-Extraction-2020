@@ -26,8 +26,8 @@ def load_data(path):
     data_lines = open(path, encoding='utf-8').readlines()
     for line in data_lines:
         line_json = json.loads(line)
-        if len(line_json['postag']) == 0:
-            continue
+        # if len(line_json['postag']) == 0:
+        #     continue
         if 'spo_list' in line_json.keys() and len(line_json['spo_list']) == 0:
             continue
         data.append(line_json)

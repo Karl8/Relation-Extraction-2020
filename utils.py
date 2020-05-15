@@ -89,6 +89,9 @@ def get_text_spolist(opt, p_entRel_t, json_data):
         # 替换回来:
         text = text.replace('$', ' ')
         data_unit['text'] = text
+        # new_spo_list = []
+        # for spo in spo_list:
+
         data_unit['spo_list'] = spo_list
         predictg_data.append(data_unit)
     return predictg_data
