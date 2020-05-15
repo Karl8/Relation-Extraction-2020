@@ -1,4 +1,5 @@
 data/standard/
+data/large/
 bert-base-chinese/bert-base-chinese.tar.gz
 checkpoints/
 __pycache__/
