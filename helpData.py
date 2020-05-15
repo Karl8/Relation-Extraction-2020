@@ -16,7 +16,7 @@ def split_multiobjects_schema(schema):
         predicate = sample['predicate']
         obj_type = sample['object_type']
         for one_obj_type in obj_type:
-            data.append({"object_type": obj_type[one_obj_type], "predicate": predicate, "subject_type": sbj_type})
+            data.append({"object_type": obj_type[one_obj_type], "predicate": predicate+"_"+one_obj_type, "subject_type": sbj_type})
     return data
 
 def split_multiobjects_data(datas):
@@ -36,7 +36,7 @@ def split_multiobjects_data(datas):
             sbj = spo["subject"]
             sbj_type = spo["subject_type"]
             for one_obj in obj:
-                split_spo_list.append({"predicate": predicate, "object_type": obj_type[one_obj], "object": obj[one_obj], "subject_type": sbj_type, "subject": sbj})
+                split_spo_list.append({"predicate": predicate+"_"+one_obj, "object_type": obj_type[one_obj], "object": obj[one_obj], "subject_type": sbj_type, "subject": sbj})
         split_data.append({"text": text, "spo_list": split_spo_list})
     return split_data
 
