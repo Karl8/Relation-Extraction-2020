@@ -2,7 +2,7 @@
 
 class Config(object):
     # -----------数据集选择--------------------#
-    dataset = 'small'            # large(没有合并type关系)/small(合并type关系)
+    dataset = 'large'            # large(没有合并type关系)/small(合并type关系)
     naNum = 2               # 每个例子中补充的最大NA关系数目
     tag_nums = 27*2+1       # tag类型数量
     rel_nums = 56           # 关系数量
@@ -42,7 +42,7 @@ class Config(object):
 
     # --------------main.py ----------------#
     load_ckpt = False
-    ckpt_path = './checkpoints/BERT_CNN_CRF_sl:180_k:[5, 9, 13]_fn:230_lam:0.85_lr:3e-05_epoch:9'
+    ckpt_path = './checkpoints/BERT_MUL_CNN_sl:180_k:[5, 9, 13]_fn:230_lam:0.85_lr:3e-05_epoch:19'
     num_workers = 1
     seed = 9979
     epochs = 20
