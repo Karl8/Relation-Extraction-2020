@@ -154,7 +154,7 @@ class BERT_MUL_CNN(BasicModule):
                 entPostion = entRel[t]
                 entPostion[-1] = out[idx].item()
                 idx+=1
-                if entPostion[-1] == 49:
+                if entPostion[-1] == self.opt.rel_nums-1:
                     continue
                 sen_pair.append(entPostion)
             all_out.append(sen_pair)

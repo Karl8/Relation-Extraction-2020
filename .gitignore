@@ -2,3 +2,6 @@ data/standard/
 bert-base-chinese/bert-base-chinese.tar.gz
 checkpoints/
 __pycache__/
+*.pyc
+log
+*.npy
