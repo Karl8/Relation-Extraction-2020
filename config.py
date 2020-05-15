@@ -30,6 +30,10 @@ class Config(object):
     test1_data_dir = origin_data_root + 'test1_data.json'
     test2_data_dir = origin_data_root + 'test2_data.json'
 
+    origin_schema_dir = origin_data_root + 'schema.json'
+    origin_train_data_dir = origin_data_root + 'train_data.json'
+    origin_dev_data_dir = origin_data_root + 'dev_data.json'
+
     log_dir = './log'
     #  -------------- 模型超参数 -----------#
     k = 9

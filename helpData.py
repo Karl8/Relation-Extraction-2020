@@ -53,11 +53,10 @@ def load_data(path, case="train"):
         for line in data_lines:
             line_json = json.loads(line)
             data.append(line_json)
-        if not path.endswith(".split"):
-            print("split data", path)
-            # split multiple objects
-            data = split_multiobjects_schema(data)
-            write_split_data(data, path + ".split")
+        # split multiple objects
+        print("split data", path)
+        data = split_multiobjects_schema(data)
+        write_split_data(data, path+".split")
     elif case == "train" or case == "dev":
         data_lines = open(path, encoding='utf-8').readlines()
         for line in data_lines:
@@ -65,10 +64,10 @@ def load_data(path, case="train"):
             if 'spo_list' not in line_json.keys() or len(line_json['spo_list']) == 0:
                 continue
             data.append(line_json)
-        if not path.endswith(".split"):
-            print("split data", path)
-            data = split_multiobjects_data(data)
-            write_split_data(data, path + ".split")
+        # split multiple objects
+        print("split data", path)
+        data = split_multiobjects_data(data)
+        write_split_data(data, path + ".split")
     elif case == "test":
         data_lines = open(path, encoding='utf-8').readlines()
         for line in data_lines:
@@ -96,15 +95,15 @@ class DataHelper(object):
         self.type2types = None
         self.get_relations()
 
-        self.origin_train_data = load_data(self.opt.train_data_dir, "train")
-        self.origin_dev_data = load_data(self.opt.dev_data_dir, "dev")
+        self.origin_train_data = load_data(self.opt.origin_train_data_dir, "train")
+        self.origin_dev_data = load_data(self.opt.origin_dev_data_dir, "dev")
         self.origin_test1_data = load_data(self.opt.test1_data_dir, "test")
 
     def get_relations(self):
         """
         得到所有的xx2xx文件
         """
-        schema = load_data(self.opt.schema_dir, "schema")
+        schema = load_data(self.opt.origin_schema_dir, "schema")
         # self.down2top = {}  # 记录类别的上下为关系
         # for old, new in zip(origin_50_schema, new_50_schema):
         #     old_sample_obj_type = old['object_type']
@@ -517,9 +516,5 @@ class DataHelper(object):
 
 
 if __name__ == '__main__':
-    # load_data(opt.train_data_dir, "train")
-    # load_data(opt.dev_data_dir, "dev")
-    # load_data(opt.test1_data_dir, "test")
-    # load_data(opt.schema_dir, "schema")
     dataHelper = DataHelper(opt)
     dataHelper.process_data()
