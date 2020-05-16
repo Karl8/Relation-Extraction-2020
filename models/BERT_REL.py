@@ -134,11 +134,11 @@ class BERT_REL(BasicModule):
                     all_rels.append(r)
 
         all_seqs = pad_sequence(all_seqs).permute(1,0)
-        if all_seqs.size(0) > 12 and not(tags is None):
-            reserved = np.random.choice(range(all_seqs.size(0)), 12, replace=True)
+        # embed()
+        if all_seqs.size(0) > self.opt.sample_size and not(tags is None):
+            reserved = np.random.choice(range(all_seqs.size(0)), self.opt.sample_size, replace=False)
             all_seqs = all_seqs[reserved]
             all_rels = np.array(all_rels)[reserved].tolist()
-        #embed()
         seq_masks = all_seqs.gt(0)
         rel_feats, _ = self.rel_bert(all_seqs, attention_mask=seq_masks)
         out = self.rel_fc(rel_feats[-1][:,0,:])

@@ -346,7 +346,10 @@ class DataHelper(object):
         rel_num = len(all_entity)
         if len(NA_entity) > 0:
             all_entity.extend(NA_entity[:min(2,len(NA_entity))])
-            NA_num =  min(opt.naNum, len(NA_entity))
+            if not opt.naNum == None:
+                NA_num =  min(opt.naNum, len(NA_entity))
+            else:
+                NA_num = len(NA_entity)
         return all_entity, rel_num, NA_num
 
     def get_sens_and_tags_and_entsRel(self, datas, case=0):
