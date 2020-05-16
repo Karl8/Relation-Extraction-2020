@@ -2,7 +2,7 @@
 
 class Config(object):
     # -----------数据集选择--------------------#
-    dataset = 'large'            # large(没有合并type关系)/small(合并type关系)
+    dataset = 'small'            # large(没有合并type关系)/small(合并type关系)
     naNum = 2               # 每个例子中补充的最大NA关系数目
     tag_nums = 27*2+1       # tag类型数量
     rel_nums = 56           # 关系数量
@@ -50,14 +50,14 @@ class Config(object):
     num_workers = 1
     seed = 9979
     epochs = 20
-    batch_size = 20
+    batch_size = 8
     use_gpu = 1
     gpu_id = 2
     # ------------optimizer ------------------#
     lr = 3e-5
     full_finetuning = True
     optimizer = 'Adam'
-    model = 'BERT_MUL_CNN'  # 'BERT_CNN_CRF'
+    model = 'BERT_REL'  # 'BERT_CNN_CRF'
     clip_grad = 2  # 梯度的最大值
 
     # ----------预测数据集----------#

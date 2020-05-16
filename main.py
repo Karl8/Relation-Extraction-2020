@@ -17,6 +17,7 @@ import config
 from data import Data
 from metrics import f1_score, f1_score_ent_rel, eval_file
 from config import opt
+from IPython import embed
 
 def load_data(path):
     '''

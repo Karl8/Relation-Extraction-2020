@@ -8,27 +8,32 @@ import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 from modules import Encoder
 from IPython import embed
+import numpy as np
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 
-class BERT_MUL_CNN(BasicModule):
+class BERT_REL(BasicModule):
     def __init__(self, opt):
-        super(BERT_MUL_CNN, self).__init__()
+        super(BERT_REL, self).__init__()
         self.opt = opt
         self.bertForToken = BertForTokenClassification.from_pretrained(self.opt.bert_model_dir, num_labels=self.opt.tag_nums)
         # tag分类
         self.num_labels = self.opt.tag_nums
 
         # 关系分类
-        self.type_emb = nn.Embedding(3, self.opt.bert_hidden_size)
-        self.rel_cnns = Encoder(enc_method='cnn', filters_num=self.opt.filter_num, filters=self.opt.filters, f_dim=self.opt.bert_hidden_size)
-        self.classifier_rels = nn.Linear(len(self.opt.filters)*self.opt.filter_num, self.opt.rel_nums)
+        self.rel_bert = BertModel.from_pretrained(self.opt.bert_model_dir)
+        self.rel_fc = nn.Sequential(nn.Linear(768, 1024), nn.ReLU(), nn.Linear(1024, self.opt.rel_nums))
 
         self.id2tag = json.loads(open(opt.id2tag_dir, 'r').readline())
         self.type2types = json.loads(open(opt.type2types_dir, 'r').readline())
-
+        self.sep1 = torch.LongTensor([1]).to("cuda")
+        self.sep2 = torch.LongTensor([2]).to("cuda")
         self.init_weights()
     def init_weights(self):
-        nn.init.xavier_uniform_(self.classifier_rels.weight)
-        nn.init.xavier_uniform_(self.type_emb.weight)
+        for name, param in self.rel_fc.named_parameters():
+            if "weight" in name:
+                nn.init.kaiming_normal_(param)
+            elif "bias" in name:
+                nn.init.constant_(param, 0.0)
 
     def match_entities(self, tags_lists):
         """
@@ -113,26 +118,30 @@ class BERT_MUL_CNN(BasicModule):
         sequence_output = self.bertForToken.dropout(sequence_output)  # (B, L, H)
         logits = self.bertForToken.classifier(sequence_output)
 
-        all_rels, all_tuples, lengths = [], [], []
+        all_rels, all_seqs = [], []
         if tags is None:
             entRels = self.match_entities(logits)
         for idx, sen_ent_rels in enumerate(entRels):
             sen_matrix = sequence_output[idx,:,:]
             for sample in sen_ent_rels:
                 # sample [s1, e1, s2, e2, r]
-                sample_matrix, length = self.get_ent_pair_matrix(sample[:4], sen_matrix)
+                s1, e1, s2, e2, r = sample
+                obj_span = batch_data[idx][s1:e1+1]
+                sub_span = batch_data[idx][s2:e2+1]
+                obj_sub_doc = torch.cat([obj_span, self.sep1, sub_span, self.sep2, batch_data[idx]])
+                all_seqs.append(obj_sub_doc)
                 if tags is not None:
-                    all_rels.append(sample[-1])
-                lengths.append(length)
-                all_tuples.append(sample_matrix.unsqueeze(0))
-        lengths = torch.LongTensor(lengths)
-        if self.opt.use_gpu:
-            lengths = lengths.cuda()
-        all_tuples = torch.cat(all_tuples, 0)  # (B * tule_num, 1, tuple_max_len, bert_hidden_size)
-        all_tuples = self.rel_cnns(all_tuples, lengths)
-        all_tuples = [F.max_pool1d(i, i.size(2)).relu().squeeze(2) for i in all_tuples]
-        all_tuples = torch.cat(all_tuples, 1)
-        out = self.classifier_rels(all_tuples)  # (B*tuple_num/B*P, 50)
+                    all_rels.append(r)
+
+        all_seqs = pad_sequence(all_seqs).permute(1,0)
+        if all_seqs.size(0) > 12 and not(tags is None):
+            reserved = np.random.choice(range(all_seqs.size(0)), 12, replace=True)
+            all_seqs = all_seqs[reserved]
+            all_rels = np.array(all_rels)[reserved].tolist()
+        #embed()
+        seq_masks = all_seqs.gt(0)
+        rel_feats, _ = self.rel_bert(all_seqs, attention_mask=seq_masks)
+        out = self.rel_fc(rel_feats[-1][:,0,:])
 
         if tags is not None:
             loss_fct = CrossEntropyLoss()
