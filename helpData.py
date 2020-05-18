@@ -1,3 +1,4 @@
+#coding=utf-8
 import json
 import os
 import re
@@ -76,7 +77,7 @@ def load_data(path, case="train"):
     return data
 
 def write_split_data(datas, path):
-    with open(path, 'w') as f:
+    with open(path, 'w', encoding="utf-8") as f:
         for data in datas:
             f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
@@ -266,6 +267,18 @@ class DataHelper(object):
                     tag_list[idx] = Iid
         return tag_list
 
+    def get_ptr_tag(self, word_list, entity_list, type_list):
+        word_list = [word.replace('#', '') for word in word_list]
+        tag_list = [[[0 for i in range(2)] for j in range(self.opt.entity_type_nums)] for k in range(len(word_list))]
+        for entity, type_ in zip(entity_list, type_list):
+            start_id, end_id = self.get_positions(word_list, entity)
+            if start_id == -1 or end_id == -1:
+                continue
+            tag_list[start_id][self.type2id[type_]][0] = 1
+            tag_list[end_id][self.type2id[type_]][1] = 1
+        return tag_list
+
+
     def get_entity_list_and_type_list(self, data_list):
         """
         得到实体和对应的类型列表，一一对应
@@ -359,6 +372,7 @@ class DataHelper(object):
         max_r_num = 0
         all_rel_num = 0
         sens, tags, ent_rel = [], [], []
+        ptr_tags = []
         PAD = self.tokenizer.convert_tokens_to_ids(['[PAD]'])
         O_tag = [self.type2id['O']]
         for data in datas:
@@ -462,12 +476,16 @@ class DataHelper(object):
             #__import__('ipdb').set_trace()
             # '▌1999年：「喜剧之王」前两年的贺岁档其实都有星爷，只不过作品票房一直跟不上'
             tag = self.get_tag(word_list, entity_list, type_list)
+            ptr_tag = self.get_ptr_tag(word_list, entity_list, type_list)
             assert len(word_list) == len(tag)
             if len(word_list) < self.opt.seq_length:
                 tag = tag + O_tag * (self.opt.seq_length - len(tag))
+                ptr_tag = ptr_tag + [[[0, 0] for j in range(self.opt.entity_type_nums)] for i in range(self.opt.seq_length - len(ptr_tag))]
             else:
                 tag = tag[:self.opt.seq_length]
+                ptr_tag = ptr_tag[:self.opt.seq_length]
             tags.append(tag)
+            ptr_tags.append(ptr_tag)
 
             # __import__('ipdb').set_trace()
             exist_map = self.get_sample_exist_entity2rlation(word_list, data['spo_list'])
@@ -484,6 +502,7 @@ class DataHelper(object):
             ent_rel.append(all_e2r)
         sens = np.array(sens)
         tags = np.array(tags)
+        ptr_tags = np.array(ptr_tags)
         ent_rel = np.array(ent_rel)
 
         root_path = self.opt.npy_data_root
@@ -502,6 +521,7 @@ class DataHelper(object):
         np.save(data_root+'sens', sens)
         if case < 2:
             np.save(data_root+'tags', tags)
+            np.save(data_root+'ptr_tags', ptr_tags)
             np.save(data_root+'relations', ent_rel)
 
     def process_data(self):

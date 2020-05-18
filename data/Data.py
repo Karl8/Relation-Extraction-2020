@@ -24,7 +24,11 @@ class Data(Dataset):
         sens = np.load(data_path+'sens.npy')
         if case < 2:
             rels = np.load(data_path+'relations.npy', allow_pickle=True)
-            tags = np.load(data_path+'tags.npy', allow_pickle=True)
+            if opt.use_ptr:
+                tags = np.load(data_path+'ptr_tags.npy', allow_pickle=True)
+                print("tagshape", tags.shape)
+            else:
+                tags = np.load(data_path+'tags.npy', allow_pickle=True)
             assert len(sens) == len(tags)
             self.data = list(zip(sens, tags, rels))
         else:

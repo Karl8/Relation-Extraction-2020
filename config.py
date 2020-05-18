@@ -6,6 +6,8 @@ class Config(object):
     naNum = None               # 每个例子中补充的最大NA关系数目
     tag_nums = 27*2+1       # tag类型数量
     rel_nums = 56           # 关系数量
+    entity_type_nums = 27
+    use_ptr = True
 
     # -------------dir ----------------#
     bert_model_dir = './bert-base-chinese/bert-base-chinese.tar.gz'
