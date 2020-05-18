@@ -90,10 +90,25 @@ def get_text_spolist(opt, p_entRel_t, json_data):
         text = text.replace('$', ' ')
         data_unit['text'] = text
         new_spo_list = []
-        # for spo in spo_list:
-        #     if 
+        sbj_dict = {}
+        for spo in spo_list:
+            temp = spo['predicate'].split('_')
+            re = temp[0]
+            ob = temp[1]
+            if spo['subject'] in sbj_dict.keys():
+                new_spo_list[sbj_dict[spo['subject']]]['object'][ob] = spo['object']
+                # new_spo_list[sbj_dict[spo['subject']]]['object_type'][ob] = spo['object_type']
+            else:
+                sbj_dict[spo['subject']] = len(new_spo_list)
+                new_spo = {}
+                new_spo['subject'] = spo['subject']
+                new_spo['predicate'] = re
+                new_spo['object'] = {ob:spo['object']}
+                # new_spo['subject_type'] = spo['subject_type']
+                # new_spo['object_type'] = spo['object_type']
+                new_spo_list.append(new_spo)
 
-        data_unit['spo_list'] = spo_list
+        data_unit['spo_list'] = new_spo_list
         predictg_data.append(data_unit)
     return predictg_data
 
