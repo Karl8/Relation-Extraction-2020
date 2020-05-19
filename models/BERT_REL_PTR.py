@@ -29,6 +29,7 @@ class BERT_REL_PTR(BasicModule):
         self.rel_fc = nn.Sequential(nn.Linear(768, 1024), nn.ReLU(), nn.Linear(1024, self.opt.rel_nums))
 
         self.id2tag = json.loads(open(opt.id2tag_dir, 'r').readline())
+        self.id2type = json.loads(open(opt.id2type_dir, 'r').readline())
         self.type2types = json.loads(open(opt.type2types_dir, 'r').readline())
         self.sep1 = torch.LongTensor([1]).to("cuda")
         self.sep2 = torch.LongTensor([2]).to("cuda")
@@ -69,10 +70,10 @@ class BERT_REL_PTR(BasicModule):
         return all_entitys
     
     def get_match_score(self, s, e):
-        seq_length = s.shape[1]
-        s = s.repeat(1, seq_length, 1)
-        e = torch.repeat_interleave(e, repeats=seq_length, dim=1)
-        # (B, seq_length^2, entity_type_nums)
+        seq_length = s.shape[2]
+        s = s.repeat(1, 1, seq_length)
+        e = torch.repeat_interleave(e, repeats=seq_length, dim=2)
+        # (B, entity_type_nums, seq_length^2)
         score = s * e
         return score
 
@@ -80,35 +81,50 @@ class BERT_REL_PTR(BasicModule):
         batch_size = tags_prob.shape[0]
         seq_length = tags_prob.shape[1]
 
-        tags_prob = tags.reshape([batch_size, seq_length, self.opt.entity_type_nums, 2])
-        score = get_match_score(tags_prob[:, :, :, 0], tags_prob[:, :, :, 1])
-        score = s_ptr_score.permute(0, 2, 1).reshape(-1, seq_length*seq_length)
-        score = torch.triu(sbj_score, diagonal=0)
+        tags_prob = tags_prob.reshape([batch_size, seq_length, self.opt.entity_type_nums, 2])
+        tags_prob = tags_prob.permute(0, 2, 1, 3)
+        
+        mask = torch.ones(seq_length, seq_length).to("cuda")
+        mask = torch.triu(mask)
+        mask = mask.unsqueeze(0).reshape(-1, seq_length*seq_length).repeat(batch_size*self.opt.entity_type_nums, 1)
+        
+        score = self.get_match_score(tags_prob[:, :, :, 0], tags_prob[:, :, :, 1])
+        score = score.reshape(-1, seq_length*seq_length)
+        
+        score = score * mask
+        # score: (B, entity_type_nums * seq_length^2)
+        # cand: (B, tuple_max_len)
+        score = score.reshape(-1, self.opt.entity_type_nums*seq_length*seq_length)
+        # TODO: add thresold
 
-        # score: (B * entity_type_nums, seq_length^2)
-        # cand: (B, entity_type_nums, tuple_max_len)
-        cand = torch.topk(sbj_score, self.opt.tuple_max_len, dim=2)[1].reshape(-1, self.opt.entity_type_nums, self.opt.tuple_max_len)
-        cand_s = sbj_cand // seq_length
-        cand_e = sbj_cand % seq_length
-
-        all_entity_pair = []
+        cand = torch.topk(score, self.opt.tuple_max_len * 2, dim=1)[1]
+        cand_s = (cand % (seq_length * seq_length)) // seq_length
+        cand_e = (cand % (seq_length * seq_length)) % seq_length
+        cand_type = cand // (seq_length * seq_length)
+        cand_type = cand_type.tolist()
+        all_entity_pairs = []
         for idx in range(batch_size):
-            for ent1 in range(self.opt.entity_type_nums):
-                for ent2 in range(self.opt.entity_type_nums):
-                    ent1_type = self.id2tag[ent1]
-                    ent2_type = self.id2tag[ent2]
+            all_entity_pair = []
+            for ent1 in range(self.opt.tuple_max_len * 2):
+                for ent2 in range(self.opt.tuple_max_len * 2):
+                    if ent1 == ent2:
+                        continue
+                    ent1_type = self.id2type[str(cand_type[idx][ent1])]
+                    ent2_type = self.id2type[str(cand_type[idx][ent2])]
                     ent2_for_ent1 = self.type2types.get(ent1_type,[])
                     if ent2_type not in ent2_for_ent1:
                         continue
-                    for cand1_idx in range(self.opt.tuple_max_len):
-                        for cand2_idx in range(self.opt.tuple_max_len):
-                            s1 = cand_s[idx, ent1, cand1_idx]
-                            e1 = cand_e[idx, ent1, cand1_idx]
-                            s2 = cand_s[idx, ent2, cand2_idx]
-                            e2 = cand_e[idx, ent2, cand2_idx]
-                            all_entity_pair.append([s1, e1, s2, e2, 0])
-        
-        return all_entity_pair
+                    s1 = cand_s[idx, ent1]
+                    e1 = cand_e[idx, ent1]
+                    s2 = cand_s[idx, ent2]
+                    e2 = cand_e[idx, ent2]
+                    all_entity_pair.append([s1, e1, s2, e2, 0])
+            all_entity_pairs.append(all_entity_pair)
+        embed()
+        if len(all_entity_pairs) == 0:
+            all_entity_pairs.append([[0, 0, 0, 0, 0] for i in range(batch_size)])
+        print(len(all_entity_pairs))
+        return all_entity_pairs
 
         
 
@@ -173,8 +189,9 @@ class BERT_REL_PTR(BasicModule):
         all_rels, all_seqs = [], []
         if tags is None:
             entRels = self.match_entities_ptr(ptr_tags)
+            embed()
         for idx, sen_ent_rels in enumerate(entRels):
-            sen_matrix = sequence_output[idx,:,:]
+            # sen_matrix = sequence_output[idx,:,:]
             for sample in sen_ent_rels:
                 # sample [s1, e1, s2, e2, r]
                 s1, e1, s2, e2, r = sample
@@ -185,7 +202,8 @@ class BERT_REL_PTR(BasicModule):
                 if tags is not None:
                     all_rels.append(r)
 
-        all_seqs = pad_sequence(all_seqs).permute(1,0)
+        all_seqs = pad_sequence(all_seqs).permute(1,0) 
+        
         # embed()
         if all_seqs.size(0) > self.opt.sample_size and not(tags is None):
             reserved = np.random.choice(range(all_seqs.size(0)), self.opt.sample_size, replace=False)
@@ -204,6 +222,7 @@ class BERT_REL_PTR(BasicModule):
             if self.opt.use_gpu:
                 all_rels = all_rels.cuda()
             loss_rels = loss_fct(out, all_rels)
+            # embed()
             return loss_tags, loss_rels
 
         all_out = []
