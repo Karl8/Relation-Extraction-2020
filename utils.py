@@ -54,7 +54,48 @@ def set_logger(log_path):
         stream_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(stream_handler)
 
-def get_text_spolist(opt, p_entRel_t, json_data, p_tags):
+def get_text_spolist(opt, p_entRel_t, json_data):
+    id2r = json.loads(open(opt.id2r_dir, 'r').readline())
+    tokenizer = BertTokenizer.from_pretrained(opt.bert_vocab_unk, do_lower_case=True)
+    predictg_data = []
+    for idx, p_tuples in enumerate(p_entRel_t):
+        data_unit = {}
+        data = json_data[idx]
+        text = data['text']
+        # 得到时按同样方式加工
+        text = text.strip().replace(' ', '$')
+        word_list = tokenizer.tokenize(text)
+        word_list = [word.replace('#', '')for word in word_list]
+        spo_list = []
+        for p_sample in p_tuples:
+            o_s, o_e, s_s, s_e, r = p_sample
+            if r == 49:
+                continue
+            obj, sbj = '',''
+            if max(o_s, o_e, s_s, s_e) >= len(word_list):
+                continue
+            for i in range(o_s, o_e+1):
+                obj = obj + word_list[i]
+            for i in range(s_s, s_e+1):
+                sbj = sbj + word_list[i]
+            #将@替换回来
+            obj = obj.replace('$', ' ')
+            sbj = sbj.replace('$', ' ')
+            spo_unit = {}
+            spo_unit['object'] = obj
+            spo_unit['subject'] = sbj
+            spo_unit['predicate'] = id2r[str(r)]
+            spo_list.append(spo_unit)
+        
+        # 替换回来:
+        text = text.replace('$', ' ')
+        data_unit['text'] = text
+
+        data_unit['spo_list'] = spo_list
+        predictg_data.append(data_unit)
+    return predictg_data
+
+def get_new_text_spolist(opt, p_entRel_t, json_data, p_tags):
     id2r = json.loads(open(opt.id2r_dir, 'r').readline())
     id2t = json.loads(open(opt.id2tag_dir, 'r').readline())
     tokenizer = BertTokenizer.from_pretrained(opt.bert_vocab_unk, do_lower_case=True)
