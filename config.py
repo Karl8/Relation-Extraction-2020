@@ -2,7 +2,7 @@
 
 class Config(object):
     # -----------数据集选择--------------------#
-    dataset = 'large'            # large(没有合并type关系)/small(合并type关系)
+    dataset = 'small'            # large(没有合并type关系)/small(合并type关系)
     naNum = None               # 每个例子中补充的最大NA关系数目
     tag_nums = 27*2+1       # tag类型数量
     rel_nums = 56           # 关系数量

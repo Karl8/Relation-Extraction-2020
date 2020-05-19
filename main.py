@@ -247,7 +247,7 @@ def tofile(**kwargs):
         data_path = opt.test2_data_dir
     json_data = load_data(data_path)[:len(true_tags)]
     # assert len(json_data) == len(p_entRel_t)
-    predict_data =  utils.get_text_spolist(opt, p_entRel_t, json_data)
+    predict_data =  utils.get_text_spolist(opt, p_entRel_t, json_data, pred_tags)
     if opt.case == 0:
         p, r, f = eval_file(predict_data, opt.dev_data_dir)
         print("predict res: pre:{};rel:{};f1:{}".format(p,r,f))

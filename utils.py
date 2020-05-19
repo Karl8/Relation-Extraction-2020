@@ -54,14 +54,16 @@ def set_logger(log_path):
         stream_handler.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(stream_handler)
 
-def get_text_spolist(opt, p_entRel_t, json_data):
+def get_text_spolist(opt, p_entRel_t, json_data, p_tags):
     id2r = json.loads(open(opt.id2r_dir, 'r').readline())
+    id2t = json.loads(open(opt.id2tag_dir, 'r').readline())
     tokenizer = BertTokenizer.from_pretrained(opt.bert_vocab_unk, do_lower_case=True)
     predictg_data = []
     for idx, p_tuples in enumerate(p_entRel_t):
         data_unit = {}
         data = json_data[idx]
         text = data['text']
+        p_tuples_tags = p_tags[idx]
         # 得到时按同样方式加工
         text = text.strip().replace(' ', '$')
         word_list = tokenizer.tokenize(text)
@@ -78,6 +80,9 @@ def get_text_spolist(opt, p_entRel_t, json_data):
                 obj = obj + word_list[i]
             for i in range(s_s, s_e+1):
                 sbj = sbj + word_list[i]
+            # print(p_tuples_tags)
+            obj_type = id2t[str(p_tuples_tags[o_s])].split('-')[1]
+            sbj_type = id2t[str(p_tuples_tags[s_s])].split('-')[1]
             #将@替换回来
             obj = obj.replace('$', ' ')
             sbj = sbj.replace('$', ' ')
@@ -85,7 +90,10 @@ def get_text_spolist(opt, p_entRel_t, json_data):
             spo_unit['object'] = obj
             spo_unit['subject'] = sbj
             spo_unit['predicate'] = id2r[str(r)]
+            spo_unit['object_type'] = obj_type
+            spo_unit['subject_type'] = sbj_type
             spo_list.append(spo_unit)
+        
         # 替换回来:
         text = text.replace('$', ' ')
         data_unit['text'] = text
@@ -97,15 +105,15 @@ def get_text_spolist(opt, p_entRel_t, json_data):
             ob = temp[1]
             if spo['subject'] in sbj_dict.keys():
                 new_spo_list[sbj_dict[spo['subject']]]['object'][ob] = spo['object']
-                # new_spo_list[sbj_dict[spo['subject']]]['object_type'][ob] = spo['object_type']
+                new_spo_list[sbj_dict[spo['subject']]]['object_type'][ob] = spo['object_type']
             else:
                 sbj_dict[spo['subject']] = len(new_spo_list)
                 new_spo = {}
                 new_spo['subject'] = spo['subject']
                 new_spo['predicate'] = re
                 new_spo['object'] = {ob:spo['object']}
-                # new_spo['subject_type'] = spo['subject_type']
-                # new_spo['object_type'] = spo['object_type']
+                new_spo['subject_type'] = spo['subject_type']
+                new_spo['object_type'] = {ob:spo['object_type']}
                 new_spo_list.append(new_spo)
 
         data_unit['spo_list'] = new_spo_list
