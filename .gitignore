@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 log
 *.npy
+out/pred_out

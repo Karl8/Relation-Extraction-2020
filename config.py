@@ -48,14 +48,14 @@ class Config(object):
 
     # --------------main.py ----------------#
     load_ckpt = False
-    ckpt_path = './checkpoints/BERT_MUL_CNN_sl:180_k:[5, 9, 13]_fn:230_lam:0.85_lr:3e-05_epoch:19'
+    ckpt_path = './checkpoints/BERT_REL_sl:180_k:[5, 9, 13]_fn:230_lam:0.85_lr:3e-05_epoch:1'
     num_workers = 1
     seed = 9979
-    epochs = 20
+    epochs = 10
     batch_size = 8
     use_gpu = 1
     gpu_id = 2
-    sample_size = 15
+    sample_size = 12
     # ------------optimizer ------------------#
     lr = 3e-5
     full_finetuning = True

@@ -62,7 +62,7 @@ def train(**kwargs):
     if opt.use_gpu:
         model.cuda()
     if opt.load_ckpt:
-        logging.info("{} load ckpt from {}".format(now(), opt.ckpt))
+        logging.info("{} load ckpt from {}".format(now(), opt.ckpt_path))
         model.load(opt.ckpt_path)
 
     # 3 data
@@ -148,26 +148,29 @@ def evaluate(opt, model, steps, data_loader, epoch, case='dev'):
         data_interator = enumerate(data_loader)
         t = trange(steps)
         for i in t:
-            idx, data = next(data_interator)
-            sens, g_tags = list(map(lambda x: torch.LongTensor(x), data[:2]))
-            g_entRel = data[-1]
-            if opt.use_gpu:
-                sens = sens.cuda()
-                g_tags = g_tags.cuda()
-            p_tags, all_out = model(sens, None, None)
-            if 'crf' not in opt.model.lower():
-                p_tags = torch.max(p_tags, 2)[1]
-            if opt.use_gpu:
-                g_tags = g_tags.cpu()
+            try:
+                idx, data = next(data_interator)
+                sens, g_tags = list(map(lambda x: torch.LongTensor(x), data[:2]))
+                g_entRel = data[-1]
+                if opt.use_gpu:
+                    sens = sens.cuda()
+                    g_tags = g_tags.cuda()
+                p_tags, all_out = model(sens, None, None)
                 if 'crf' not in opt.model.lower():
-                    p_tags = p_tags.cpu()
-            g_tags = g_tags.tolist()
-            goldens.extend([id2tag.get(idx) for indices in g_tags for idx in indices])
-            if 'crf' not in opt.model.lower():
-                p_tags = p_tags.tolist()
-            predicts.extend([id2tag.get(idx) for indices in p_tags for idx in indices])
-            g_entRel_t.extend(g_entRel)
-            p_entRel_t.extend(all_out)
+                    p_tags = torch.max(p_tags, 2)[1]
+                if opt.use_gpu:
+                    g_tags = g_tags.cpu()
+                    if 'crf' not in opt.model.lower():
+                        p_tags = p_tags.cpu()
+                g_tags = g_tags.tolist()
+                goldens.extend([id2tag.get(idx) for indices in g_tags for idx in indices])
+                if 'crf' not in opt.model.lower():
+                    p_tags = p_tags.tolist()
+                predicts.extend([id2tag.get(idx) for indices in p_tags for idx in indices])
+                g_entRel_t.extend(g_entRel)
+                p_entRel_t.extend(all_out)
+            except:
+                pass
         # 测试单纯的位置对应准确率
     assert len(g_entRel_t) == len(p_entRel_t)
     p_t, r_t, f_t = f1_score_ent_rel(g_entRel_t, p_entRel_t)
@@ -244,7 +247,7 @@ def tofile(**kwargs):
         data_path = opt.test2_data_dir
     json_data = load_data(data_path)[:len(true_tags)]
     # assert len(json_data) == len(p_entRel_t)
-    predict_data =  utils.get_text_spolist(opt, p_entRel_t, json_data)
+    predict_data =  utils.get_text_spolist(opt, p_entRel_t, json_data, pred_tags)
     if opt.case == 0:
         p, r, f = eval_file(predict_data, opt.dev_data_dir)
         print("predict res: pre:{};rel:{};f1:{}".format(p,r,f))
